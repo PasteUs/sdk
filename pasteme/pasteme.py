@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function
 
 import requests
+from .util import urljoin
 
 
 class PasteMe(object):
@@ -8,6 +9,12 @@ class PasteMe(object):
     def __init__(self, api_url: str = 'http://api.pasteme.cn/', token: str = ''):
         self.api_url = api_url
         self.token = token
+
+        response: dict = requests.api.get(url=self.api_url, params={'method': 'beat'}).json()
+        expected_response = {'status': 200}
+
+        if response != expected_response:
+            raise AssertionError(f"{expected_response} is expected, got {response}")
 
     def get(self, key: [int, str], password: [int, str] = None, json: bool = False) -> [dict, str]:
         """
@@ -22,8 +29,8 @@ class PasteMe(object):
         }
         """
 
-        url: str = f'{self.api_url}{key}{"" if password is None else ",{}".format(password)}?json={str(json).lower()}'
-        response: requests.Response = requests.api.get(url=url)
+        url: str = urljoin(self.api_url, f"{key}" if password is None else f"{key},{password}")
+        response: requests.Response = requests.api.get(url=url, params={'json': str(json).lower()})
 
         return response.json() if json else response.content.decode('utf-8')
 
@@ -50,10 +57,10 @@ class PasteMe(object):
             json_param['password'] = password
 
         if read_once:
-            response: requests.Response = requests.api.post(url=f'{self.api_url}once', json=json_param)
+            response: requests.Response = requests.api.post(url=f'{urljoin(self.api_url, "once")}', json=json_param)
         elif key is None or len(key) == 0:
             response: requests.Response = requests.api.post(url=self.api_url, json=json_param)
         else:
-            response: requests.Response = requests.api.put(url=f'{self.api_url}{key}', json=json_param)
+            response: requests.Response = requests.api.put(url=f'{urljoin(self.api_url, key)}', json=json_param)
 
         return response.json()
